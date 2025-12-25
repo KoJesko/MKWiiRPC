@@ -1,0 +1,37 @@
+{
+  "name": "wiimmfi-rpc",
+  "version": "1.0.0",
+  "description": "Wiimmfi -> Discord Rich Presence watcher (modular). Watches your profile and updates Discord RPC.",
+  "type": "module",
+  "main": "src/main.js",
+  "engines": {
+    "node": ">=16"
+  },
+  "scripts": {
+    "start": "node ./src/main.js",
+    "dev": "node --watch ./src/main.js",
+    "lint": "eslint . || echo \"eslint not installed\"",
+    "test": "echo \"No tests configured\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ArianLust/Wiimmfi-RPC.git"
+  },
+  "keywords": [
+    "wiimmfi",
+    "discord-rpc",
+    "mkw",
+    "mariokartwii"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ArianLust/Wiimmfi-RPC/issues"
+  },
+  "homepage": "https://github.com/ArianLust/Wiimmfi-RPC#readme",
+  "dependencies": {
+    "cheerio": "^1.1.2",
+    "discord-rpc": "^4.0.1",
+    "puppeteer": "^24.25.0"
+  }
+}
