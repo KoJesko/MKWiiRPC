@@ -31,7 +31,7 @@ Click on Releases and grab the latest prebuilt version!
 <li> Under config.js insert your pid on wiimmfi (read the comment or watch the tutorial video below)
 <li> Run npm start and you should be good to go!
 </ol>
-<p>Tutorial Video:
+<p>Tutorial Video: https://www.youtube.com/watch?v=yThQYEeNr1M
 <details>
 <summary><h2>Common Issues</h2></summary>
 
@@ -51,7 +51,7 @@ Click on Releases and grab the latest prebuilt version!
 
 * Yeah uhhh, that is pretty difficult to solve, this is an issue from Wiimmfi's side, it doesn't seem to display the values correctly, can't do much sadly.
 
-> My Activity says in an Unkown Room or just In a Room!
+> My Activity says In an Unknown Room or just In a Room!
 
 * Another issue I cannot solve, the GLOBAL_STATS_URL is showing that you're in a room but it doesn't know which one since the SELF_WATCH_URL doesn't display any results, best bet is to accept it or find another room, Midnight in Europe is a bad time to look for rooms by the way from personal experience!
 </details>
