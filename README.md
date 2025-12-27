@@ -27,9 +27,10 @@ Click on Releases and grab the latest prebuilt version!
 <ol>
 
 <li> Clone the repository or download the prebuilt source code
-<li> Run npm ci to get all the modules up and running at the same version of this project
+<li> Run npm ci to get all the modules up and running at the same version of this project (this is only required if you downloaded the sorurce code)
 <li> Under config.js insert your pid on wiimmfi (read the comment or watch the tutorial video below)
 <li> Run npm start and you should be good to go!
+</ol>
 <p>Tutorial Video:
 <details>
 <summary><h2>Common Issues</h2></summary>

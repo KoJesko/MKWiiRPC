@@ -80,8 +80,10 @@ export async function updatePresence(parsed) {
     const p = parsed;
     const s = p.self;
     let displayTrack = null;
+    let trackEntry = null; 
     if (p.trackName) {
       displayTrack = translateTrack(p.trackName, t); // returns translated string (or throws)
+      trackEntry = findTrackKey(p.trackName);
     }
     const inRoom = Boolean((p.roomTrId && String(p.roomTrId).trim()) || (p.roomListFullUrl && String(p.roomListFullUrl).trim()));
     const partySize = Math.min(Math.max(0, Number(p.playerCount || 0)), MAX_PLAYERS);
@@ -109,14 +111,16 @@ export async function updatePresence(parsed) {
     const versusNum = safeParseInt(stripDigits(versusRaw));
     const battleNum  = safeParseInt(stripDigits(battleRaw));
 
-    const explicitBattle = /bt/i.test(String(s.roomMatch || "")) || p.lobbyType === "battle";
-    const explicitRace   = /vs/i.test(String(s.roomMatch || "")) || p.lobbyType === "race";
-    let looksLikeBattle = false;
-    if (!explicitBattle && p.trackName) {
-      looksLikeBattle = BATTLE_TRACKS && BATTLE_TRACKS.has && BATTLE_TRACKS.has(p.trackName);
-    }
-    let isBattle = explicitBattle || (!explicitRace && looksLikeBattle);
+    const roomMatchLower = String(s.roomMatch || "").toLowerCase();
+    const explicitBattle = roomMatchLower.includes("bt") || String(p.lobbyType || "").toLowerCase() === "battle";
+    const explicitRace   = roomMatchLower.includes("vs") || String(p.lobbyType || "").toLowerCase() === "race";
+
+    const looksLikeBattle = !!(trackEntry && trackEntry.type === "battle");
+
+    let isBattle = false;
     if (explicitRace) isBattle = false;
+    else if (explicitBattle) isBattle = true;
+    else isBattle = looksLikeBattle;
 
     const pointsLabel = isBattle ? t("br_label") : t("vr_label");
     const showPoints = inRoom;
@@ -173,10 +177,9 @@ if (inRoom && p.lobbyType === "private" && Number(s.suspend) !== 1) {
 
 // 2) Voting images only apply for non-private rooms where suspend === 1
 } else if (inRoom && p.lobbyType !== "private" && Number(s.suspend) === 1) {
-  const votingIsBattle =
-    /bt/i.test(String(s.roomMatch || "")) ||
-    p.lobbyType === "battle" ||
-    (p.trackName && BATTLE_TRACKS?.has?.(p.trackName));
+  const votingIsBattle = (String(s.roomMatch || "").toLowerCase().includes("bt"))
+                        || String(p.lobbyType || "").toLowerCase() === "battle"
+                        || (!!trackEntry && trackEntry.type === "battle");
 
   largeKey = votingIsBattle
     ? (VOTING_IMAGE_BATTLE_KEY || LARGE_IMAGE_KEY)
@@ -184,14 +187,12 @@ if (inRoom && p.lobbyType === "private" && Number(s.suspend) !== 1) {
 
 // 3) Otherwise, if a track name is present (e.g. while racing/battling), use the mapped key
 } else if (p.trackName) {
-  const tk = findTrackKey(p.trackName);
+  const tk = trackEntry || findTrackKey(p.trackName);
   if (tk?.key) largeKey = tk.key;
 } else {
   // 4) fallback generic
   largeKey = LARGE_IMAGE_KEY;
 }
-
-
 
     const lt = (p.lobbyType || "").toString().toLowerCase();
     let state;
@@ -199,7 +200,7 @@ if (inRoom && p.lobbyType === "private" && Number(s.suspend) !== 1) {
     else if (lt === "continental") state = t("in_continental_room");
     else if (["worldwide", "race", "battle"].includes(lt)) state = t("in_worldwide_room");
     else if (lt === "online") state = t("online_state");
-    else if (lt === "new") state = t("room_newin_new_room");
+    else if (lt === "new") state = t("in_new_room");
     else state = t("in_room_unknown");
 
     const presence = {
