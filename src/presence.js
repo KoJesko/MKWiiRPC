@@ -8,7 +8,8 @@ import {
   MAX_PLAYERS,
   SELF_PATH_SEGMENT,
   VOTING_IMAGE_BATTLE_KEY,
-  VOTING_IMAGE_VERSUS_KEY
+  VOTING_IMAGE_VERSUS_KEY,
+  DEBUG_MODE
 } from "./config.js";
 import { safeParseInt, buildSmallText } from "./utils.js";
 import { findTrackKey, BATTLE_TRACKS, translateTrack } from "./trackMap.js";
@@ -25,6 +26,28 @@ export async function initPresence() {
     console.error("⚠️ Discord RPC login failed:", e && e.message ? e.message : e);
     throw e;
   }
+}
+
+const DebugMode = Boolean(DEBUG_MODE);
+
+// log debug lines only when DebugMode is on
+function dbg(...args) {
+  if (DebugMode) console.log(...args);
+}
+function dbgDebug(...args) {
+  if (DebugMode) console.debug(...args);
+}
+
+// presence summary logger: full details when debug ON, short timestamp when debug OFF
+function presenceLogSummary(detailsObj) {
+  if (DebugMode) {
+    console.log("Presence updated:", detailsObj);
+    return;
+  }
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mm = String(now.getMinutes()).padStart(2, "0");
+  console.log(`(${hh}:${mm}) Presence updated!`);
 }
 
 const stripDigits = s => (s ? String(s).replace(/[^\d\-]/g, "").trim() : "");
@@ -91,7 +114,7 @@ export async function updatePresence(parsed) {
     let versusRaw = s.versus ? String(s.versus) : "";
     let battleRaw  = s.battle  ? String(s.battle) : "";
 
-    console.log("DEBUG raw points strings (from parsed.self):", {
+    dbg("DEBUG raw points strings (from parsed.self):", {
       versusRaw, versusCp: codepoints(versusRaw),
       battleRaw, battleCp: codepoints(battleRaw)
     });
@@ -99,11 +122,11 @@ export async function updatePresence(parsed) {
     if (!stripDigits(versusRaw) || !stripDigits(battleRaw)) {
       const fb = fallbackPointsFromHtml(p.rawHtml || "", s.friendCode || "");
       if (!stripDigits(versusRaw) && fb.versus) {
-        console.log("DEBUG fallback (versus):", fb.versus);
+        dbg("DEBUG fallback (versus):", fb.versus);
         versusRaw = fb.versus;
       }
       if (!stripDigits(battleRaw) && fb.battle) {
-        console.log("DEBUG fallback (battle):", fb.battle);
+        dbg("DEBUG fallback (battle):", fb.battle);
         battleRaw = fb.battle;
       }
     }
@@ -128,8 +151,8 @@ export async function updatePresence(parsed) {
                                                : (Number.isFinite(versusNum) ? versusNum : 0))
                                    : null;
 
-    console.log("DEBUG points parsing:", {
-      versusNum, battleNum, explicitBattle, explicitRace, looksLikeBattle, isBattle, showPoints, pointsValue //i am so sorry for including looksLikeBattle and isBattle it hurts me more than you think
+    dbg("DEBUG points parsing:", {
+      versusNum, battleNum, explicitBattle, explicitRace, looksLikeBattle, isBattle, showPoints, pointsValue
     });
 
     let details;
@@ -225,7 +248,7 @@ if (inRoom && p.lobbyType === "private" && Number(s.suspend) !== 1) {
 
     rpcClient.setActivity(presence);
 
-    console.log("Presence updated:", {
+    presenceLogSummary({
       details: presence.details,
       state: presence.state,
       partyId: presence.partyId,
