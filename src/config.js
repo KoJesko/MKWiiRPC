@@ -15,3 +15,4 @@ export const VOTING_IMAGE_VERSUS_KEY = "voting_versus";
 export const VOTING_IMAGE_BATTLE_KEY  = "voting_battle";
 
 export const LANGUAGE = process.env.APP_LANGUAGE || "en-us";    //check the locals folder for all the available languages
+export const DEBUG_MODE = false;                                //enable this if you need to debug, will cause a bunch of chaos in logs

@@ -1,6 +1,6 @@
 import { load } from "cheerio";
 import { normalizeText, splitNamesFromCell } from "./utils.js";
-import { SELF_PATH_SEGMENT, BASE_URL } from "./config.js";
+import { SELF_PATH_SEGMENT, BASE_URL, DEBUG_MODE } from "./config.js";
 
 /**
  * Normalize cell text but treat dash placeholders as empty.
@@ -11,6 +11,16 @@ function normCleanText($cell) {
   if (!t) return "";
   if (/^[\u2014\u2013\-—\s]+$/.test(t)) return "";
   return t;
+}
+
+const DebugMode = Boolean(DEBUG_MODE);
+
+// log debug lines only when DebugMode is on
+function dbg(...args) {
+  if (DebugMode) console.log(...args);
+}
+function dbgDebug(...args) {
+  if (DebugMode) console.debug(...args);
 }
 
 /**
@@ -188,13 +198,13 @@ export function parseDefaultSiteHtml(html) {
   }
 
   // debug 
-  console.log("DEBUG lobby detection (default):", { headerText, headerRoomMatch: headerRoomMatch && headerRoomMatch[1], lobbyType });
+  dbg("DEBUG lobby detection (default):", { headerText, headerRoomMatch: headerRoomMatch && headerRoomMatch[1], lobbyType });
   let roomListFullUrl = null;
   if (roomListHref) roomListFullUrl = roomListHref.startsWith("http") ? roomListHref : BASE_URL + roomListHref;
   else if (roomTrId) roomListFullUrl = `${BASE_URL}/stats/mkw/list/${roomTrId}`;
 
   if (online) {
-    console.log("PARSER[default] self row parsed:", {
+    dbg("PARSER[default] self row parsed:", {
       friendCode: self.friendCode,
       versus: self.versus,
       battle: self.battle,
@@ -331,7 +341,7 @@ export function parseAltSiteHtml(html) {
   const roomListFullUrl = roomListHref ? (roomListHref.startsWith("http") ? roomListHref : BASE_URL + roomListHref) : null;
 
   if (online) {
-    console.log("PARSER[alt] self row parsed:", {
+    dbg("PARSER[alt] self row parsed:", {
       friendCode: self.friendCode,
       versus: self.versus,
       battle: self.battle,
