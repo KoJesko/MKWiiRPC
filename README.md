@@ -1,3 +1,7 @@
+> **Retro Rewind fork.** This fork shows Retro WFC rooms (rwfc.net) instead of Wiimmfi, plus a singleplayer status read from WiiCompiled's memory on Windows: track and variant, mode, cc including Custom cc, position, character, kart, speed and pause. Memory is only read, never written, and it targets the PAL version.
+>
+> Setup: set `FRIEND_CODE` and `RETRO_REWIND_ROOT` in `src/config.js`, then run `npm install` and `npm start`.
+
 # Mario Kart Wii Rich Presence
 
 <p>This small Javascript Program allows you to share your Mario Kart Wii Wiimmfi Online Details on Discord with it's rich presence feature!</p>

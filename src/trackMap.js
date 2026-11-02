@@ -55,7 +55,7 @@ function normalizeForKey(s) {
   return String(s)
     .normalize("NFKC")
     .replace(/\(.*?\)/g, "")                        // remove parenthesis blocks
-    .replace(/\b(Wii|N64|GCN|DS|GBA|SNES)\b/gi, "") // optional: strip platform tokens
+    // platform tokens are kept: Retro Rewind has e.g. Wii/N64/SNES Rainbow Road as different tracks
     .replace(/[^\w\s]/g, "")                        // remove punctuation
     .replace(/\s+/g, " ")
     .trim()
@@ -91,27 +91,8 @@ export function findTrackKey(rawTrackName) {
     return { key: e.assetKey, i18nKey: e.i18nKey, canonicalName: e.canonical, score: 1.0, matchType: "exact", normalized, type: e.type };
   }
 
-  // token intersection scoring
-  const tokens = normalized.split(" ").filter(Boolean);
-  let best = { key: null, score: 0, name: null, entry: null };
-  for (const [knownNorm, entry] of Object.entries(NORMALIZED_TO_ENTRY)) {
-    const knownTokens = knownNorm.split(" ").filter(Boolean);
-    const inter = tokens.filter(t => knownTokens.includes(t));
-    const unionSize = new Set([...tokens, ...knownTokens]).size || 1;
-    const score = inter.length / unionSize;
-    if (score > best.score) best = { key: entry.assetKey, score, name: knownNorm, entry };
-  }
-  if (best.score >= 0.35 && best.entry) {
-    return { key: best.entry.assetKey, i18nKey: best.entry.i18nKey, canonicalName: best.entry.canonical, score: best.score, matchType: "token", normalized, type: best.entry.type };
-  }
-
-  // substring heuristics
-  for (const [knownNorm, entry] of Object.entries(NORMALIZED_TO_ENTRY)) {
-    if (knownNorm.includes(normalized) || normalized.includes(knownNorm)) {
-      return { key: entry.assetKey, i18nKey: entry.i18nKey, canonicalName: entry.canonical, score: 0.5, matchType: "substring", normalized, type: entry.type };
-    }
-  }
-
+  // no fuzzy matching: Retro Rewind has lots of retro tracks with near-identical names
+  // (SNES Mario Circuit 1 vs 3, DS vs GBA Bowser Castle), unknown tracks just show their own name
   return { key: null, i18nKey: null, canonicalName: null, score: 0, matchType: "none", normalized, type: null };
 }
 

@@ -1,12 +1,10 @@
 import RPC from "discord-rpc";
-import { load as cheerioLoad } from "cheerio";
 import {
   DISCORD_CLIENT_ID,
   LARGE_IMAGE_KEY,
   SMALL_IMAGE_KEY,
   OFFLINE_SMALL_KEY,
   MAX_PLAYERS,
-  SELF_PATH_SEGMENT,
   VOTING_IMAGE_BATTLE_KEY,
   VOTING_IMAGE_VERSUS_KEY,
   DEBUG_MODE
@@ -14,18 +12,23 @@ import {
 import { safeParseInt, buildSmallText } from "./utils.js";
 import { findTrackKey, BATTLE_TRACKS, translateTrack } from "./trackMap.js";
 import { t } from "./i18n.js"; // <- strict loader; will throw if missing
+import { localGameStatus } from "./localGame.js";
 
 RPC.register(DISCORD_CLIENT_ID);
-export const rpcClient = new RPC.Client({ transport: "ipc" });
+// null while Discord isn't connected
+export let rpcClient = null;
 
+// a client can't retry after a failed login (it caches the rejected connect), so every attempt gets a new one
 export async function initPresence() {
-  try {
-    await rpcClient.login({ clientId: DISCORD_CLIENT_ID });
-    console.log("✅ Discord RPC connected");
-  } catch (e) {
-    console.error("⚠️ Discord RPC login failed:", e && e.message ? e.message : e);
-    throw e;
-  }
+  const client = new RPC.Client({ transport: "ipc" });
+  client.on("error", (e) => console.warn("Discord RPC error:", e && e.message ? e.message : e));
+  await client.login({ clientId: DISCORD_CLIENT_ID });
+  client.once("disconnected", () => {
+    if (rpcClient === client) rpcClient = null;
+    console.log("Discord closed — waiting for it to come back");
+  });
+  rpcClient = client;
+  console.log("✅ Discord RPC connected");
 }
 
 const DebugMode = Boolean(DEBUG_MODE);
@@ -53,28 +56,61 @@ function presenceLogSummary(detailsObj) {
 const stripDigits = s => (s ? String(s).replace(/[^\d\-]/g, "").trim() : "");
 const codepoints = s => (s ? Array.from(String(s)).map(c => c.charCodeAt(0)) : []);
 
-function fallbackPointsFromHtml(rawHtml, friendCode) {
-  if (!rawHtml) return { versus: "", battle: "" };
-  const $ = cheerioLoad(rawHtml);
-  const pid = (SELF_PATH_SEGMENT || "").replace(/^p/, "");
-  let td = pid ? $(`td[data-tooltip="pid=${pid}"]`).first() : cheerioLoad()();
-  if ((!td || td.length === 0) && pid) {
-    const a = $(`a[href*="/list/p${pid}"]`).first();
-    if (a && a.length) td = a.closest("td");
+function ordinal(n) {
+  const rest = n % 100;
+  if (rest >= 11 && rest <= 13) return `${n}th`;
+  return `${n}${["th", "st", "nd", "rd"][n % 10] || "th"}`;
+}
+
+function formatTime(ms) {
+  const min = Math.floor(ms / 60000);
+  const sec = String(Math.floor(ms / 1000) % 60).padStart(2, "0");
+  return `${min}:${sec}.${String(ms % 1000).padStart(3, "0")}`;
+}
+
+const MODE_KEYS = ["mode_gp", "mode_vs", "mode_tt", "mode_battle", "mode_mission", "mode_ghost"];
+
+/**
+ * updateLocalPresence: singleplayer status from the running game
+ * local = localGameStatus() from localGame.js
+ */
+export async function updateLocalPresence(local) {
+  if (!rpcClient) return;
+  try {
+    const presence = {
+      largeImageKey: LARGE_IMAGE_KEY,
+      largeImageText: t("mario_kart_wii"),
+      instance: false
+    };
+
+    if (!local.inRace) {
+      presence.details = t("online_not_in_room");
+    } else {
+      const track = local.trackName ? translateTrack(local.trackName, t) : null;
+      const prefix = local.gameMode === 3 ? t("battling_on_prefix") : t("racing_on_prefix");
+      presence.details = (track ? `${prefix}: ${track}` : prefix).slice(0, 128);
+
+      const trackEntry = local.baseTrackName ? findTrackKey(local.baseTrackName) : null;
+      if (trackEntry?.key) presence.largeImageKey = trackEntry.key;
+
+      const mode = MODE_KEYS[local.gameMode] ? t(MODE_KEYS[local.gameMode]) : null;
+      const engine = local.engine ? `${local.engine}${local.mirror ? ` ${t("mirror_label")}` : ""}` : null;
+      const position = local.racers > 1 && local.position > 0 ? `${ordinal(local.position)}/${local.racers}` : null;
+      let status = null;
+      if (local.finished) status = `${t("local_finished")} ${formatTime(local.timeMs)}`;
+      else if (local.paused) status = `${t("local_paused")} ${formatTime(local.timeMs)}`;
+      const speed = !local.finished && !local.paused ? `${local.speed} km/h` : null;
+      const top = local.topSpeed > 0 ? `${t("top_speed_label")} ${local.topSpeed}` : null;
+      presence.state = [mode, engine, position, local.character, local.vehicle, speed, top, status].filter(Boolean).join(" • ").slice(0, 128);
+
+      if (!local.finished && !local.paused) presence.startTimestamp = Date.now() - local.timeMs;
+    }
+
+    await rpcClient.setActivity(presence);
+    presenceLogSummary({ details: presence.details, state: presence.state });
+  } catch (err) {
+    console.warn("Failed to update presence:", err && err.message ? err.message : err);
   }
-  if ((!td || td.length === 0) && friendCode) {
-    const aExact = $(`a`).filter((i, el) => $(el).text().trim() === friendCode).first();
-    if (aExact && aExact.length) td = aExact.closest("td");
-  }
-  if ((!td || td.length === 0) && friendCode) {
-    const tdExact = $(`td`).filter((i, el) => $(el).text().trim() === friendCode).first();
-    if (tdExact && tdExact.length) td = tdExact;
-  }
-  if (!td || td.length === 0) return { versus: "", battle: "" };
-  const row = td.closest("tr");
-  if (!row || row.length === 0) return { versus: "", battle: "" };
-  const tds = row.find("td").toArray().map(el => cheerioLoad(el).text().replace(/\u00A0/g, " ").trim());
-  return { versus: tds[6] || "", battle: tds[7] || "" };
 }
 
 function buildSmallLine(firstMii, extra, fc, label, value) {
@@ -86,17 +122,11 @@ function buildSmallLine(firstMii, extra, fc, label, value) {
 }
 
 export async function updatePresence(parsed) {
+  if (!rpcClient) return;
   try {
+    // not in a Retro WFC room → show nothing on the profile
     if (!parsed || !parsed.online || !parsed.self || !parsed.self.miiName) {
-      rpcClient.setActivity({
-        details: t("offline_details"),
-        state: t("offline_state"),
-        largeImageKey: LARGE_IMAGE_KEY,
-        largeImageText: `${t("mario_kart_wii")}`,
-        smallImageKey: OFFLINE_SMALL_KEY,
-        smallImageText: t("offline_small"),
-        instance: false
-      });
+      await rpcClient.clearActivity();
       return;
     }
 
@@ -107,29 +137,20 @@ export async function updatePresence(parsed) {
     if (p.trackName) {
       displayTrack = translateTrack(p.trackName, t); // returns translated string (or throws)
       trackEntry = findTrackKey(p.trackName);
+      // rwfc.net only reports the main track name, the running game knows the variant
+      const liveTrack = p.racing ? localGameStatus()?.trackName : null;
+      if (liveTrack) displayTrack = translateTrack(liveTrack, t);
     }
     const inRoom = Boolean((p.roomTrId && String(p.roomTrId).trim()) || (p.roomListFullUrl && String(p.roomListFullUrl).trim()));
     const partySize = Math.min(Math.max(0, Number(p.playerCount || 0)), MAX_PLAYERS);
 
-    let versusRaw = s.versus ? String(s.versus) : "";
-    let battleRaw  = s.battle  ? String(s.battle) : "";
+    const versusRaw = s.versus ? String(s.versus) : "";
+    const battleRaw  = s.battle  ? String(s.battle) : "";
 
     dbg("DEBUG raw points strings (from parsed.self):", {
       versusRaw, versusCp: codepoints(versusRaw),
       battleRaw, battleCp: codepoints(battleRaw)
     });
-
-    if (!stripDigits(versusRaw) || !stripDigits(battleRaw)) {
-      const fb = fallbackPointsFromHtml(p.rawHtml || "", s.friendCode || "");
-      if (!stripDigits(versusRaw) && fb.versus) {
-        dbg("DEBUG fallback (versus):", fb.versus);
-        versusRaw = fb.versus;
-      }
-      if (!stripDigits(battleRaw) && fb.battle) {
-        dbg("DEBUG fallback (battle):", fb.battle);
-        battleRaw = fb.battle;
-      }
-    }
 
     const versusNum = safeParseInt(stripDigits(versusRaw));
     const battleNum  = safeParseInt(stripDigits(battleRaw));
@@ -156,27 +177,17 @@ export async function updatePresence(parsed) {
     });
 
     let details;
-    // Proper friend-room logic:
-    // private → suspend=1 = racing/battling, suspend=0 = menu
+    // Retro WFC: racing = a race/battle is running in our room
+    // not racing → friend room menu (private) or voting / between races (public)
     if (inRoom) {
-      if (p.lobbyType === "private") {
-        if (Number(s.suspend) === 1) {
-          details = p.trackName
-              ? `${isBattle ? t("battling_on_prefix") : t("racing_on_prefix")}: ${displayTrack}`
-              : (isBattle ? t("battling_on_prefix") : t("racing_on_prefix"));
-        } else {
-          details = t("friend_room_menu");
-
-        }
+      if (p.racing) {
+        details = displayTrack
+          ? `${isBattle ? t("battling_on_prefix") : t("racing_on_prefix")}: ${displayTrack}`
+          : (isBattle ? t("battling_on_prefix") : t("racing_on_prefix"));
+      } else if (p.lobbyType === "private") {
+        details = t("friend_room_menu");
       } else {
-        // worldwide / continental logic (voting exists here)
-        if (Number(s.suspend) === 1) {
-          details = t("voting_for_track");
-        } else if (displayTrack) {
-          details = `${isBattle ? t("battling_on_prefix") : t("racing_on_prefix")}: ${displayTrack}`;
-        } else {
-          details = isBattle ? t("battling_on_prefix") : t("racing_on_prefix");
-        }
+        details = t("voting_for_track");
       }
     } else {
       details = (p.lobbyType === "online")
@@ -193,13 +204,13 @@ export async function updatePresence(parsed) {
 
     let largeKey = LARGE_IMAGE_KEY;
 
-// 1) If we're in a friend room and NOT currently racing/battling (suspend !== 1),
+// 1) If we're in a friend room and NOT currently racing/battling,
 //    always show the generic image (don't reuse last-track image).
-if (inRoom && p.lobbyType === "private" && Number(s.suspend) !== 1) {
+if (inRoom && p.lobbyType === "private" && !p.racing) {
   largeKey = LARGE_IMAGE_KEY;
 
-// 2) Voting images only apply for non-private rooms where suspend === 1
-} else if (inRoom && p.lobbyType !== "private" && Number(s.suspend) === 1) {
+// 2) Voting images only apply for non-private rooms between races
+} else if (inRoom && p.lobbyType !== "private" && !p.racing) {
   const votingIsBattle = (String(s.roomMatch || "").toLowerCase().includes("bt"))
                         || String(p.lobbyType || "").toLowerCase() === "battle"
                         || (!!trackEntry && trackEntry.type === "battle");
@@ -225,6 +236,10 @@ if (inRoom && p.lobbyType === "private" && Number(s.suspend) !== 1) {
     else if (lt === "online") state = t("online_state");
     else if (lt === "new") state = t("in_new_room");
     else state = t("in_room_unknown");
+    // Retro WFC room types, e.g. "In a Worldwide Room • Retro Tracks"
+    if (p.roomType && lt !== "private") state = `${state} • ${p.roomType}`.slice(0, 128);
+    const local = p.racing ? localGameStatus() : null;
+    if (local?.inRace) state = [state, local.character, local.vehicle].filter(Boolean).join(" • ").slice(0, 128);
 
     const presence = {
       details,
@@ -246,7 +261,7 @@ if (inRoom && p.lobbyType === "private" && Number(s.suspend) !== 1) {
       presence.partyMax = Number(MAX_PLAYERS);
     }
 
-    rpcClient.setActivity(presence);
+    await rpcClient.setActivity(presence);
 
     presenceLogSummary({
       details: presence.details,
