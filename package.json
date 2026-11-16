@@ -31,7 +31,6 @@
   "homepage": "https://github.com/ArianLust/MKWiiRPC#readme",
   "dependencies": {
     "cheerio": "^1.1.2",
-    "discord-rpc": "^4.0.1",
-    "puppeteer": "^24.25.0"
+    "discord-rpc": "^4.0.1"
   }
 }
