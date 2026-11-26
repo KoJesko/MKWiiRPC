@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import readline from "readline";
 import { RETRO_REWIND_ROOT } from "./config.js";
 import { cupSignature, pulsarTrackName } from "./pulsarTracks.js";
+import { startLinuxReader } from "./readGameLinux.js";
 
 const SCRIPT = fileURLToPath(new URL("./readGame.ps1", import.meta.url));
 // Retro Rewind reuses the game's 50cc and 100cc slots for 500cc and 200cc
@@ -128,7 +129,9 @@ function startReader(signature) {
 
 export function startLocalGame() {
   try {
-    startReader(cupSignature());
+    // Windows reads the game through PowerShell; Linux reads WiiCompiled's memfd directly
+    if (process.platform === "linux") startLinuxReader(cupSignature(), onSample);
+    else startReader(cupSignature());
   } catch (e) {
     console.warn("Singleplayer status unavailable:", e && e.message ? e.message : e);
   }

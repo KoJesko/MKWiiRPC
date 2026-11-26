@@ -1,7 +1,7 @@
 export const FRIEND_CODE = "0000-0000-0000";                    //your friend code on Retro WFC (Retro Rewind) / it's the end of your profile link e.g. https://rwfc.net/player/0000-0000-0000
 export const BASE_URL = "https://rwfc.net";
 export const ROOM_STATUS_URL = `${BASE_URL}/api/roomstatus`;
-export const RETRO_REWIND_ROOT = "C:/path/to/RetroRewind6";   //retro_rewind_root in WiiCompiled's Config.toml, used for track names
+export const RETRO_REWIND_ROOT = process.env.RETRO_REWIND_ROOT || "C:/path/to/RetroRewind6";   //retro_rewind_root in WiiCompiled's Config.toml, used for track names (Linux: e.g. /mnt/Data/Dolphin-x64/User-Linux/Load/Riivolution/WheelWizard/RetroRewind6)
 export const DISCORD_CLIENT_ID = "1429941165310087178";
 //mostly ignore changing the ones without a comment, unless you really want to change something
 export const POLL_INTERVAL = 15 * 1000;

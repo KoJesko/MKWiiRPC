@@ -1,6 +1,15 @@
 > **Retro Rewind fork.** This fork shows Retro WFC rooms (rwfc.net) instead of Wiimmfi, plus a singleplayer status read from WiiCompiled's memory on Windows: track and variant, mode, cc including Custom cc, position, character, kart, speed and pause. Memory is only read, never written, and it targets the PAL version.
 >
 > Setup: set `FRIEND_CODE` and `RETRO_REWIND_ROOT` in `src/config.js`, then run `npm install` and `npm start`.
+>
+> **🐧 Linux:** this branch also reads the singleplayer status on Linux, from WiiCompiled built by Wheel Wizard (Recomp, PAL). It reads the game's memory through `/proc` (the `wiicompiled-guest-ram` memfd), so it needs no root and works with the default `ptrace_scope=1`; nothing is ever written. Set `RETRO_REWIND_ROOT` to the `retro_rewind_root` from Recomp's `Config.toml`, either in `src/config.js` or as an environment variable:
+>
+> ```sh
+> git clone -b linux https://github.com/KoJesko/MKWiiRPC && cd MKWiiRPC && npm install
+> RETRO_REWIND_ROOT=/path/to/Riivolution/WheelWizard/RetroRewind6 npm start
+> ```
+>
+> Online rooms (rwfc.net) work the same as on Windows. Dolphin isn't supported for the singleplayer status, on Linux or Windows.
 
 # Mario Kart Wii Rich Presence
 
