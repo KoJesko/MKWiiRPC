@@ -2,10 +2,10 @@
 >
 > Setup: set `FRIEND_CODE` and `RETRO_REWIND_ROOT` in `src/config.js`, then run `npm install` and `npm start`.
 >
-> **🐧 Linux:** this branch also reads the singleplayer status on Linux, from WiiCompiled built by Wheel Wizard (Recomp, PAL). It reads the game's memory through `/proc` (the `wiicompiled-guest-ram` memfd), so it needs no root and works with the default `ptrace_scope=1`; nothing is ever written. Set `RETRO_REWIND_ROOT` to the `retro_rewind_root` from Recomp's `Config.toml`, either in `src/config.js` or as an environment variable:
+> **🐧 Linux:** the singleplayer status also works on Linux, from WiiCompiled built by Wheel Wizard (Recomp, PAL). It reads the game's memory through `/proc` (the `wiicompiled-guest-ram` memfd), so it needs no root and works with the default `ptrace_scope=1`; nothing is ever written. Set `RETRO_REWIND_ROOT` to the `retro_rewind_root` from Recomp's `Config.toml` (Flatpak Wheel Wizard: `~/.var/app/io.github.TeamWheelWizard.WheelWizard/data/WiiCompiled/Config.toml`), either in `src/config.js` or as an environment variable:
 >
 > ```sh
-> git clone -b linux https://github.com/KoJesko/MKWiiRPC && cd MKWiiRPC && npm install
+> git clone https://github.com/KoJesko/MKWiiRPC && cd MKWiiRPC && npm install
 > RETRO_REWIND_ROOT=/path/to/Riivolution/WheelWizard/RetroRewind6 npm start
 > ```
 >
