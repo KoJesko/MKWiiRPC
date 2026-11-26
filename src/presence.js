@@ -100,7 +100,7 @@ export async function updateLocalPresence(local) {
       if (local.finished) status = `${t("local_finished")} ${formatTime(local.timeMs)}`;
       else if (local.paused) status = `${t("local_paused")} ${formatTime(local.timeMs)}`;
       const speed = !local.finished && !local.paused ? `${local.speed} km/h` : null;
-      const top = local.topSpeed > 0 ? `${t("top_speed_label")} ${local.topSpeed}` : null;
+      const top = local.topSpeed > 0 ? `${t("top_speed_label")} ${local.topSpeed} km/h` : null;
       presence.state = [mode, engine, position, local.character, local.vehicle, speed, top, status].filter(Boolean).join(" • ").slice(0, 128);
 
       if (!local.finished && !local.paused) presence.startTimestamp = Date.now() - local.timeMs;
