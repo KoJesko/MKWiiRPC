@@ -17,11 +17,14 @@ const RACE_CONFIG = 0x809BD728, RACE_INFO = 0x809BD730, KART_MANAGER = 0x809C18F
 const CUSTOM_CC_OFFSET = 0x3DC0;        // Retro Rewind's Custom cc value, relative to the cups pointer
 const valid = (p) => p >= 0x80000000 && p < 0x98000000;
 
+// Match on the executable path in argv[0]: WiiCompiled renames its main thread to "Main thread",
+// so /proc/<pid>/comm never says RetroRewind.
 function findGamePid() {
   for (const entry of fs.readdirSync("/proc")) {
     if (!/^\d+$/.test(entry)) continue;
     try {
-      if (fs.readFileSync(`/proc/${entry}/comm`, "utf8").trim() === PROCESS_NAME) return Number(entry);
+      const argv0 = fs.readFileSync(`/proc/${entry}/cmdline`, "utf8").split("\0")[0];
+      if (argv0.split("/").pop() === PROCESS_NAME) return Number(entry);
     } catch (_) { /* process exited while we looked */ }
   }
   return 0;
